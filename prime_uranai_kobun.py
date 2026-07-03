@@ -54,8 +54,9 @@ def get_fortune(req: BirthdayRequest):
             formula_str = f"{target_num} ＝ {' × '.join(map(str, factors))}"
             aim_hint = f"{target_num}の素因数分解は {' × '.join(map(str, factors))} です。"
             
-        # 🔑 完全なる安全地帯のAPIキー
-        api_key = "AIzaSyC8Q06Ooq44zh7qv5EJbCmyWvv-EEY3Y5U"
+　　　　# 🔑 GitHubには鍵を書かない！Renderの「秘密の引き出し（環境変数）」から自動で読み込むべさ！
+        import os
+        api_key = os.getenv("GEMINI_API_KEY")
         
         # 🎲 乱数の仕掛け（これまでと全く同じロジックを継承）
         today_num = int(datetime.date.today().strftime('%Y%m%d'))
