@@ -100,7 +100,13 @@ def get_fortune(req: BirthdayRequest):
         
         if response.status_code == 200:
             res_data = response.json()
-            ai_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+            
+            # 🛡️ どんな形でも絶対に500エラーでズッコケない安全ネットの抽出法
+            try:
+                ai_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+            except Exception as e:
+                # もしデータの形が違って抜き出せなかったら、エラーにせず生データを文字にして返すべさ！
+                ai_text = f"データの形が想定と違うべさ。生データ: {json.dumps(res_data)}"
             
             # 🎁 フロント（HTML）に返す「大成功セット」
             return {
@@ -108,7 +114,9 @@ def get_fortune(req: BirthdayRequest):
                 "fortune": ai_text
             }
         else:
-            raise HTTPException(status_code=response.status_code, detail="Geminiとの通信に失敗したべさ")
-            
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+            # Googleからエラーコード（400番や403番など）が返ってきた場合
+            # そのコードをそのままHTML側に伝えて、500エラーになるのを防ぐべさ！
+            return {
+                "formula": formula_str,
+                "fortune": f"GoogleのAI工場からエラーが返ってきたべさ。（コード: {response.status_code}, 内容: {response.text}）"
+            }
