@@ -1,7 +1,7 @@
 import json
 import random
 import datetime
-import requests
+import urllib.request  # 📦 外部ライブラリを一切使わない、標準の通信道具だべさ！
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -52,10 +52,9 @@ def get_fortune(req: BirthdayRequest):
             ai_hint = f"{target_num}は他のいかなる数にも割り切れない「素数」です。"
         else:
             formula_str = f"{target_num} ＝ {' × '.join(map(str, factors))}"
-            ai_hint = f"{target_num}の素因数分解は {' × '.join(map(str, factors))} です。"
+            aim_hint = f"{target_num}の素因数分解は {' × '.join(map(str, factors))} です。"
             
-        # 🔑 サーバーの中だから、APIキーをそのまま1列で堂々と書いても「絶対に誰にも見えない」べさ！
-        # これぞ完全なる安全地帯！
+        # 🔑 完全なる安全地帯のAPIキー
         api_key = "AIzaSyC8Q06Ooq44zh7qv5EJbCmyWvv-EEY3Y5U"
         
         # 🎲 乱数の仕掛け（これまでと全く同じロジックを継承）
@@ -80,7 +79,7 @@ def get_fortune(req: BirthdayRequest):
    - 3や7、また大きな奇数（43など）が含まれる場合：鋭利な知性、密かなこだわりを持つクリエイターとしての資質、深層の美意識。
 3. 漢数字（一、二、百など）は横書きで読みづらいため、一切使わないでください。数字を表現する場合は、必ず【半角の算用数字（2、5、43など）】を使用してください。
 4. 文字数は250文字〜400文字程度とし、読む者を納得の深みへと誘う文章にしてください。
-5. 文末には、星々の巡りが告げる今期の守護として、以下の「指定された曜日」と「指定された日にち」を厳かに宣告してください。これら以外の数字や素数を勝手に創作してはいけません。
+5. 文末には、星々の巡りが告げる今期の守護として、以下の「指定された曜日」と「指定された日にち」を厳かに宣告してください。これら以外の数字や素数を勝数を創作してはいけません。
 
 【今期お前に授ける守護の刻印（必ず文末に含めること）】
 ・守護の曜日：{todays_guardian_weekday}
@@ -91,32 +90,41 @@ def get_fortune(req: BirthdayRequest):
 数式データ：{ai_hint}
 """
 
-        # 🚀 Gemini API へ通信
+        # 🚀 Gemini API へ通信（標準ライブラリの urllib を使用）
         api_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
         headers = {"Content-Type": "application/json"}
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         
-        response = requests.post(api_url, headers=headers, json=payload)
+        # 荷物をバイトデータに変換してGoogleに突撃！
+        data = json.dumps(payload).encode("utf-8")
+        req_obj = urllib.request.Request(api_url, data=data, headers=headers, method="POST")
         
-        if response.status_code == 200:
-            res_data = response.json()
-            
-            # 🛡️ どんな形でも絶対に500エラーでズッコケない安全ネットの抽出法
-            try:
-                ai_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
-            except Exception as e:
-                # もしデータの形が違って抜き出せなかったら、エラーにせず生データを文字にして返すべさ！
-                ai_text = f"データの形が想定と違うべさ。生データ: {json.dumps(res_data)}"
-            
-            # 🎁 フロント（HTML）に返す「大成功セット」
+        try:
+            with urllib.request.urlopen(req_obj) as response:
+                res_data = json.loads(response.read().decode("utf-8"))
+                
+                # 🛡️ データの安全抽出ネット
+                try:
+                    ai_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+                except Exception:
+                    ai_text = f"データの形が想定と違うべさ。生データ: {json.dumps(res_data)}"
+                
+                return {
+                    "formula": formula_str,
+                    "fortune": ai_text
+                }
+                
+        except urllib.error.HTTPError as e:
+            # Googleからエラーが返ってきた場合
+            error_body = e.read().decode("utf-8")
             return {
                 "formula": formula_str,
-                "fortune": ai_text
+                "fortune": f"Google工場から拒否されたべさ。（コード: {e.code}, 内容: {error_body}）"
             }
-        else:
-            # Googleからエラーコード（400番や403番など）が返ってきた場合
-            # そのコードをそのままHTML側に伝えて、500エラーになるのを防ぐべさ！
-            return {
-                "formula": formula_str,
-                "fortune": f"GoogleのAI工場からエラーが返ってきたべさ。（コード: {response.status_code}, 内容: {response.text}）"
-            }
+            
+    except Exception as e:
+        # 万が一のその他エラーも、500にせず文字で返す！
+        return {
+            "formula": formula_str,
+            "fortune": f"サーバー内部で予期せぬ乱れが発生したべさ。（エラー: {str(e)}）"
+        }
