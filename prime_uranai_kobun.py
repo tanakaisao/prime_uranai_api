@@ -52,7 +52,7 @@ def get_fortune(req: BirthdayRequest):
             ai_hint = f"{target_num}は他のいかなる数にも割り切れない「素数」です。"
         else:
             formula_str = f"{target_num} ＝ {' × '.join(map(str, factors))}"
-            aim_hint = f"{target_num}の素因数分解は {' × '.join(map(str, factors))} です。"
+            ai_hint = f"{target_num}の素因数分解は {' × '.join(map(str, factors))} です。"
             
         # 🔑 GitHubには鍵を書かない！Renderの「秘密の引き出し（環境変数）」から自動で読み込むべさ！
         import os
