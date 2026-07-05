@@ -13,7 +13,7 @@ app = FastAPI()
 
 # 🌐 【防壁1】通信をジェイのGitHub Pagesだけに限定
 # ⚠️ [ジェイのGitHubユーザー名] を実際のユーザー名に書き換えておくれ！
-ALLOWED_ORIGIN = "https://[ジェイのGitHubユーザー名].github.io"
+ALLOWED_ORIGIN = "https://tanakaisao.github.io"
 
 app.add_middleware(
     CORSMiddleware,
