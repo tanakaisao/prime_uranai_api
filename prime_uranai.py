@@ -92,7 +92,7 @@ def execute_gemini_uranai(req: BirthdayRequest, style: str):
             formula_str = f"{target_num} ＝ {' × '.join(map(str, factors))}"
             ai_hint = f"{target_num}の素因数分解は {' × '.join(map(str, factors))} です。"
             
-        # 🔑 Renderの「秘密の引き出し」から、ジェイの最強AQキーを自動取得！
+        # 🔑 Renderの「秘密の引き出し」から、ジェイの最強APIキーを自動取得！
         api_key = os.getenv("GEMINI_API_KEY")
         
         # 🎲 乱数の仕掛け（曜日と日にちの守護）
@@ -166,23 +166,24 @@ def execute_gemini_uranai(req: BirthdayRequest, style: str):
                 "fortune": ai_text
             }
 
-    # 🔬 【超絶強化】Googleからのエラーメッセージの「中身」を徹底的にほじくり返すべさ！
+    # 🛡️ 【おもてなし仕様】Googleからのエラーを受け止め、優しい日本語に翻訳するべさ！
     except urllib.error.HTTPError as http_err:
-        try:
-            # Googleが返してきた詳細なエラー理由（JSONなど）を読み解く
-            error_body = http_err.read().decode("utf-8")
+        # 🚨 429番（回数オーバー / クォータ上限）の時
+        if http_err.code == 429:
             return {
-                "formula": f"HTTPエラー {http_err.code}",
-                "fortune": f"Googleからの詳細警告だべさ：\n{error_body}"
+                "formula": "本日分は終了だべさ",
+                "fortune": "本日の占いは大盛況のため売り切れだべさ！無料枠の制限（1日20回）に達したから、また明日おいで！"
             }
-        except Exception:
+        # 🚨 それ以外のHTTPエラー（サーバー混雑など）の時
+        else:
             return {
-                "formula": f"HTTPエラー {http_err.code}",
-                "fortune": f"通信エラーが発生したべさ。({str(http_err)})"
+                "formula": f"お休み中（コード: {http_err.code}）",
+                "fortune": "ちょっとGoogleのAIが考え込んでるみたいだべさ。少し時間を空けて試してみておくれ。"
             }
             
+    # 🚨 通信そのものができなかったり、その他のエラーの時
     except Exception as e:
         return {
             "formula": "エラーだべさ",
-            "fortune": f"サーバー内部で予期せぬ乱れが発生したべさ。（エラー: {str(e)}）"
+            "fortune": "ちょっと調子が悪いみたいだべさ。時間を空けてもう一度ボタンを押してみておくれ。"
         }
