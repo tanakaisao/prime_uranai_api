@@ -3,19 +3,22 @@ import random
 import datetime
 import urllib.request
 import os  # 🔑 秘密の引き出し（環境変数）を使うための道具
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # 🏢 サーバー（API）の本体を起動！
 app = FastAPI()
 
-# 🌐 どこからでも通信を受け入れる魔法の設定
+# 🌐 【防壁1】通信をジェイのGitHub Pagesだけに限定するべさ！
+# ⚠️ [ジェイのGitHubユーザー名] を実際のユーザー名に書き換えておくれ！
+ALLOWED_ORIGIN = "https://tanakaisao.github.io"
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[ALLOWED_ORIGIN],  # ❌ "*" をやめて、ジェイのサイトだけを許可！
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["POST"],          # 使うのはPOSTだけなので限定して防御力を上げるべさ
     allow_headers=["*"],
 )
 
@@ -40,25 +43,46 @@ def prime_factors(n):
 
 
 # =====================================================================
-# 🔮 部屋1：格式高い「古文調」占い（今大成功したやつだべさ！）
-# URL: https://prime-uranai-api.onrender.com/uranai
+# 🔮 部屋1：格式高い「古文調」占い
 # =====================================================================
 @app.post("/uranai")
-def get_fortune_kobun(req: BirthdayRequest):
+async def get_fortune_kobun(req: BirthdayRequest, request: Request):
+    # 🕵️‍♂️ ロボットチェックを最初に行うべさ！
+    check_robot(request)
     return execute_gemini_uranai(req, style="kobun")
 
 
 # =====================================================================
 # 🔮 部屋2：新設！親しみやすい「現代文」占い
-# URL: https://prime-uranai-api.onrender.com/uranai_gendai
 # =====================================================================
 @app.post("/uranai_gendai")
-def get_fortune_gendai(req: BirthdayRequest):
+async def get_fortune_gendai(req: BirthdayRequest, request: Request):
+    # 🕵️‍♂️ ロボットチェックを最初に行うべさ！
+    check_robot(request)
     return execute_gemini_uranai(req, style="gendai")
 
 
 # =====================================================================
-# 🧠 Gemini突撃＆占い生成の共通メカニズム（裏方の仕事人）
+# 🛡️ 【防壁2】怪しい自動プログラム（ロボット）を検知して叩き落とす関数
+# =====================================================================
+def check_robot(request: Request):
+    headers = request.headers
+    user_agent = headers.get("user-agent", "").lower()
+    sec_fetch_site = headers.get("sec-fetch-site", "").lower()
+    
+    # 1. そもそもブラウザの情報（User-Agent）が空っぽ、または怪しいスクリプト名を検知
+    is_robot_agent = not user_agent or any(x in user_agent for x in ["python", "curl", "wget", "httpclient", "bot", "crawl"])
+    
+    # 2. 最新ブラウザが付ける「どこから通信が来たか」の足跡をチェック（same-site や cross-site 以外の異常検知）
+    # 通常、GitHub Pages から Render への通信は "cross-site" になるべさ
+    if is_robot_agent or (sec_fetch_site and sec_fetch_site not in ["cross-site", "same-site"]):
+        # ロボットには優しく「403 Forbidden（お前は立ち入り禁止だべさ！）」を突きつけて終了！
+        # これで奥の Gemini API（Google）まで攻撃が届かなくなるのさ！
+        raise HTTPException(status_code=403, detail="Access denied for automated systems.")
+
+
+# =====================================================================
+# 👑 Gemini突撃＆占い生成の共通メカニズム（裏方の仕事人）
 # =====================================================================
 def execute_gemini_uranai(req: BirthdayRequest, style: str):
     try:
@@ -89,7 +113,6 @@ def execute_gemini_uranai(req: BirthdayRequest, style: str):
         
         # 📜 スタイルによってプロンプト（AIへの命令書）を切り替えるべさ！
         if style == "kobun":
-            # 🌸 古文調の命令書
             prompt = f"""
 あなたは世界の理を数式から読み解く、深淵で知的な「素因数分解占い師」です。
 ユーザーの誕生日から導かれた数字「{target_num}」と、その素因数分解の結果「{formula_str}」が持つ固有の波動を読み解き、その人物の運勢や本質、性格を格式高く、謎めいた表現（古文調の美しい日本語）で占ってください。
@@ -110,7 +133,6 @@ def execute_gemini_uranai(req: BirthdayRequest, style: str):
 数式データ：{ai_hint}
 """
         else:
-            # 🌻 現代文（親しみやすい口調）の命令書
             prompt = f"""
 あなたは世界の理を数式から読み解く、知的で親しみやすい現代の「素因数分解占い師」です。
 ユーザーの誕生日から導かれた数字「{target_num}」と、その素因数分解の結果「{formula_str}」が持つ意味を分かりやすく分析し、その人の運勢や本質、性格を、前向きで元気が出る現代の言葉（丁寧な標準語）で占ってください。
@@ -152,6 +174,7 @@ def execute_gemini_uranai(req: BirthdayRequest, style: str):
             }
             
     except Exception as e:
+        # もしGoogle側から本当の429エラーが返ってきた場合は、そのままエラーメッセージを出す
         return {
             "formula": "エラーだべさ",
             "fortune": f"サーバー内部で予期せぬ乱れが発生したべさ。（エラー: {str(e)}）"
