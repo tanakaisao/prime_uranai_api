@@ -46,7 +46,7 @@ def prime_factors(n):
 # =====================================================================
 # 🔮 部屋1：格式高い「古文調」占い
 # =====================================================================
-@app.post("/uranai")
+@app.post("/uranai_kobun")
 async def get_fortune_kobun(req: BirthdayRequest, request: Request):
     check_robot(request)
     return execute_gemini_uranai(req, style="kobun")
