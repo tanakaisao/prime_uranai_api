@@ -11,13 +11,16 @@ from pydantic import BaseModel
 # 🏢 サーバー（API）の本体を起動！
 app = FastAPI()
 
-# 🌐 【防壁1】通信をジェイのGitHub Pagesだけに限定
-# ⚠️ [ジェイのGitHubユーザー名] を実際のユーザー名に書き換えておくれ！
-ALLOWED_ORIGIN = "https://tanakaisao.github.io"
+# 🌐 【防壁1】通信をジェイのGitHub Pagesとローカルファイルに限定
+# 💡 2つの住所を許可するために、角カッコ [ ] を使ってリスト（名簿）にするべさ！
+ALLOWED_ORIGINS = [
+    "https://tanakaisao.github.io",  # 正規のGitHub Pages
+    "null"                           # パソコンの黒い画面（ローカルファイル）からの通信
+]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[ALLOWED_ORIGIN],
+    allow_origins=ALLOWED_ORIGINS,   # 💡 上で作った2つの名簿（S付き）を指定するべさ
     allow_credentials=True,
     allow_methods=["POST"],
     allow_headers=["*"],
