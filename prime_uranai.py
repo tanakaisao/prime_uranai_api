@@ -30,12 +30,12 @@ class BirthdayRequest(BaseModel):
     month: int
     day: int
 
-# 📥 【新設】今日の運勢用：実験用の「今日の日付」も一緒に受け取る器だべさ！
+# 📥 今日の運勢用：占いたい日付も一緒に受け取る器だべさ！
 class TodayUranaiRequest(BaseModel):
     month: int       # 誕生月
     day: int         # 誕生日
-    today_month: int # 【実験用】今日の月
-    today_day: int   # 【実験用】今日の日
+    today_month: int # 今日の月
+    today_day: int   # 今日の日
 
 
 # 🧮 素因数分解の計算マシン
@@ -54,65 +54,65 @@ def prime_factors(n):
 
 
 # =====================================================================
-# 🔮 部屋1：格式高い「古文調」占い（完全無傷！）
+# 🔮 部屋1：格式高い「古文調」占い
 # =====================================================================
 @app.post("/uranai_kobun")
 async def get_fortune_kobun(req: BirthdayRequest, request: Request):
-    check_robot(request)
+    check_robot(request)  # 🛡️ 鉄壁の防壁
     return execute_gemini_uranai(req, style="kobun")
 
 
 # =====================================================================
-# 🔮 部屋2：新設！親しみやすい「現代文」占い（完全無傷！）
+# 🔮 部屋2：親しみやすい「現代文」占い
 # =====================================================================
 @app.post("/uranai_gendai")
 async def get_fortune_gendai(req: BirthdayRequest, request: Request):
-    check_robot(request)
+    check_robot(request)  # 🛡️ 鉄壁の防壁
     return execute_gemini_uranai(req, style="gendai")
 
 
 # =====================================================================
-# 🔮 部屋3：【新登場！】今日の素因数ジャンプ占い（ジェミニの真骨頂！）
+# 🔮 部屋3：今日の素因数ジャンプ占い（威厳ある古文調）
 # =====================================================================
 @app.post("/uranai_today")
 async def get_fortune_today(req: TodayUranaiRequest, request: Request):
-    check_robot(request)  # 🛡️ ロボットチェックも共通でバチッと機能！
+    check_robot(request)  # 🛡️ ここでも鉄壁の防壁がしっかり作動するべさ！
     
     try:
         # 1. 数字の仕込み
-        b_num = req.month * 100 + req.day        # 誕生日の月日（例: 1015）
-        t_num = req.today_month * 100 + req.today_day # 今日の月日（例: 718）
-        total_num = b_num + t_num                # 合体数（例: 1733）
+        b_num = req.month * 100 + req.day        # 誕生日の月日
+        t_num = req.today_month * 100 + req.today_day # 指定された月日
+        total_num = b_num + t_num                # 合体数
         
-        # 2. ジェイのアイデア通り、2つの素因数分解を別々に実行！
+        # 2. 2つの素因数分解を実行
         b_factors = prime_factors(b_num)
         total_factors = prime_factors(total_num)
         
-        # 式の文字列を作っておくべさ
+        # 式の文字列作成
         b_formula = f"{b_num} ＝ 【 素数 】" if len(b_factors) == 1 else f"{b_num} ＝ {' × '.join(map(str, b_factors))}"
         total_formula = f"{total_num} ＝ 【 素数 】" if len(total_factors) == 1 else f"{total_num} ＝ {' × '.join(map(str, total_factors))}"
         
-        # 🔑 Renderの環境変数からAPIキー取得
         api_key = os.getenv("GEMINI_API_KEY")
         
-        # 📜 今日の運勢専用プロンプト（2つの素因数の物語を紡ぐ）
+        # 📜 【古文調・威厳仕様】2つの素因数から宿命を読み解くプロンプト
         prompt = f"""
-あなたは数学の神秘とユーモアを愛する、親しみやすい凄腕の占い師（北海道弁混じり）だべさ。
-以下の「2つの素因数分解データ」を深く読み解き、今日の運勢をドラマチックに占っておくれ。
+あなたは数式の理（ことわり）から星々の巡りと宿命を読み解く、深淵で厳かなる「素因数分解占い師」です。
+提示された「2つの素因数分解データ」を深く凝視し、求むる日の運勢と宿命の変転を、格式高く謎めいた【古文調の美しい日本語】にて厳かに宣（のたま）ってください。
 
 【対象データ】
-・占う人の誕生日：{req.month}月{req.day}日 (数式：{b_formula})
-・占う日の日付：{req.today_month}月{req.today_day}日
-・合体させた数字 ({b_num} ＋ {t_num} ＝ {total_num}) の数式：{total_formula}
+・生れし日の月日：{req.month}月{req.day}日 (数式：{b_formula})
+・占うべき日の月日：{req.today_month}月{req.today_day}日
+・二つの霊数を合一せし数 ({b_num} ＋ {t_num} ＝ {total_num}) の数式：{total_formula}
 
-【占いのストーリー設計ルール】
-1. もし「誕生日」と「占う日の日付」が同じ（誕生日当日）なら、合計数は元の2倍になり、絶対に新たな素因数「2」が加わります。その時は「1年に1度、あなたのベースの素数に『2』の祝福が重なる奇跡の日だべさ！」と大絶賛して熱くお祝いしてください。
-2. 普段の日であれば、誕生日の素因数（その人のDNA）と、今日の合計数の素因数を比べ、「同じ素数があって共鳴している」「今日は巨大な素数がドカンと現れたから大勝負の時だべさ」「2や3が細かく並んだからバランスが良いわ」など、数学的なシンクロニシティを楽しく前向きに解説してください。
-3. 語尾は「〜だべさ」「〜だわ」「〜おくれ」「〜だもね」など、親しみやすい北海道のトーンにしてください。
-4. 文字数は250文字〜400文字程度とし、読んだ人がワクワクして今日1日を元気に過ごせる文章にしてください。
+【占いの掟】
+1. 親しみやすさや世俗のくだけた口調は一切排し、読む者に畏怖と納得を与える深遠なる語彙（〜なり、〜べし、〜けり等）を用いてください。
+2. もし「生れし日」と「占うべき日」が同じ（誕生日当日）なれば、合一数は元の2倍となり、必ず新たな素因数「2」が加わります。その時は「1年に1度、己が根源の霊数に『2』の祝福が重なり、新たな理が始まる奇跡の刻（とき）なり」と、至高 of 至高の吉日としてお祝いしてください。
+3. 普段の日なれば、生れし日の素因数（固有のDNA）と、合一せし数の素因数を対比し、「同じ素数が共鳴せし日」「巨大なる素数が現れし故、大いなる決断の刻なり」「2や3が細かく並び、調和に満ちたる日なり」など、数学的なシンクロニシティ（数理の神秘）を厳かに解き明かしてください。
+4. 漢数字は一切使わず、数字を表現する場合は、必ず【半角の算用数字（2、5、43など）】を使用してください。
+5. 文字数は250文字〜400文字程度とし、読む者を厳かなる納得へと誘う文章にしてください。
 """
 
-        # 🚀 Gemini API へ通信（新しめのモデル名「gemini-2.5-flash」をそのまま踏襲）
+        # 🚀 Gemini API へ通信
         api_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
         headers = {"Content-Type": "application/json"}
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
@@ -125,7 +125,7 @@ async def get_fortune_today(req: TodayUranaiRequest, request: Request):
             ai_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
             
             return {
-                "formula": f"誕生日:{b_formula} / 今日との合体数:{total_formula}",
+                "formula": f"生れし日:{b_formula} ／ 合一せし数:{total_formula}",
                 "fortune": ai_text
             }
 
@@ -133,18 +133,17 @@ async def get_fortune_today(req: TodayUranaiRequest, request: Request):
         if http_err.code == 429:
             return {
                 "formula": "本日分は終了だべさ",
-                "fortune": "本日の占いは大盛況のため売り切れだべさ！無料枠の制限に達したから、また明日おいで！"
+                "fortune": "星々の対話が限界に達したべさ！また明日おいで！"
             }
         else:
             return {
-                "formula": f"お休み中（コード: {http_err.code}）",
-                "fortune": "ちょっとGoogleのAIが考え込んでるみたいだべさ。少し時間を空けて試してみておくれ。"
+                "formula": f"エラー（コード: {http_err.code}）",
+                "fortune": "ちょっとAIの調和が乱れているみたいだべさ。少し時間を空けて試してみておくれ。"
             }
-            
     except Exception as e:
         return {
             "formula": "エラーだべさ",
-            "fortune": "ちょっと調子が悪いみたいだべさ。時間を空けてもう一度ボタンを押してみておくれ。"
+            "fortune": "通信の調和が乱れました。時間を空けてもう一度試してみておくれ。"
         }
 
 
@@ -159,3 +158,110 @@ def check_robot(request: Request):
     is_robot_agent = not user_agent or any(x in user_agent for x in ["python", "curl", "wget", "httpclient", "bot", "crawl"])
     if is_robot_agent or (sec_fetch_site and sec_fetch_site not in ["cross-site", "same-site"]):
         raise HTTPException(status_code=403, detail="Access denied for automated systems.")
+
+
+# =====================================================================
+# 👑 Gemini突撃＆占い生成の共通メカニズム（裏方の仕事人：現代文・古文用）
+# =====================================================================
+def execute_gemini_uranai(req: BirthdayRequest, style: str):
+    try:
+        m_str = str(req.month)
+        d_str = str(req.day)
+        target_num = req.month * 100 + req.day
+        
+        factors = prime_factors(target_num)
+        
+        if len(factors) == 1:
+            formula_str = f"{target_num} ＝ 【 素数 】"
+            ai_hint = f"{target_num}は他のいかなる数にも割り切れない「素数」です。"
+        else:
+            formula_str = f"{target_num} ＝ {' × '.join(map(str, factors))}"
+            ai_hint = f"{target_num}の素因数分解は {' × '.join(map(str, factors))} です。"
+            
+        api_key = os.getenv("GEMINI_API_KEY")
+        
+        today_num = int(datetime.date.today().strftime('%Y%m%d'))
+        fortune_seed = today_num + target_num
+        random.seed(fortune_seed)
+        
+        weekdays = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"]
+        todays_guardian_weekday = random.choice(weekdays)
+        todays_guardian_day = random.randint(1, 31)
+        
+        if style == "kobun":
+            prompt = f"""
+あなたは世界の理を数式から読み解く、深淵で知的な「素因数分解占い師」です。
+ユーザーの誕生日から導かれた数字「{target_num}」と、その素因数分解の結果「{formula_str}」が持つ固有の波動を読み解き、その人物の運勢や本質、性格を格式高く、謎めいた表現（古文調の美しい日本語）で占ってください。
+
+【占いの掟】
+1. くだけた口調や俗世の固有名詞は一切使わないでください。神秘のベールに包まれた厳かな、しかしどこか美しく豊かな語彙で語りかけてください。
+2. 数字の構成から得られるインスピレーションを言葉に宿らせてください。
+3. 漢数字は一切使わないでください。数字を表現する場合は、必ず【半角の算用数字（2、5、43など）】を使用してください。
+4. 文字数は250文字〜400文字程度とし、読む者を納得の深みへと誘う文章にしてください。
+5. 文末には、星々の巡りが告げる今期の守護として、以下の「指定された曜日」と「指定された日にち」を厳かに宣告してください。
+
+【今期お前に授ける守護の刻印（必ず文末に含めること）】
+・守護の曜日：{todays_guardian_weekday}
+・守護の日にち：{todays_guardian_day}日
+
+対象データ：
+誕生日：{m_str}月{d_str}日
+数式データ：{ai_hint}
+"""
+        else:
+            prompt = f"""
+あなたは世界の理を数式から読み解く、知的で親しみやすい現代の「素因数分解占い師」です。
+ユーザーの誕生日から導かれた数字「{target_num}」と, その素因数分解の結果「{formula_str}」が持つ意味を分かりやすく分析し、その人の運勢や本質、性格を、前向きで元気が出る現代の言葉（丁寧な標準語）で占ってください。
+
+【占いの掟】
+1. 古風な言い回しは使わず、現代人にスッと伝わる、爽やかで説得力のある優しい口調（「〜です」「〜ます」）で語りかけてください。
+2. 数字の構成から得られるインスピレーションを言葉に宿らせてください。
+   - 素数の場合：誰にも真似できない強い個性、ブレない信念を持つリーダー、未来を切り開くカリスマ性。
+   - 2や5などの偶数や馴染み深い調和の数が多い場合：抜群のコミュニケーション能力、周囲を笑顔にする社交性、チームのバランスを取る天才。
+   - 3や7、また大きな奇数（43 danceなど）が含まれる場合：独自のセンスを持つクリエイター、鋭い直感と知性、こだわりを形にする力。
+3. 数字を表現する場合は、必ず【半角の算用数字（2、5、43など）】を使用してください。
+4. 文字数は250文字〜400文字程度とし、読んだ人がワクワクして明日への活力になるような文章にしてください。
+5. 文末には、ハッピーを呼び込む今期のラッキーアイテムとして、以下の「指定された曜日」と「指定された日にち」を軽やかに優しく伝えてください。
+
+【今期あなたをハッピーにする守護のサイン（必ず文末に含めること）】
+・ラッキーな曜日：{todays_guardian_weekday}
+・ラッキーな日にち：{todays_guardian_day}日
+
+対象データ：
+誕生日：{m_str}月{d_str}日
+数式データ：{ai_hint}
+"""
+
+        api_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
+        headers = {"Content-Type": "application/json"}
+        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        
+        data = json.dumps(payload).encode("utf-8")
+        req_obj = urllib.request.Request(api_url, data=data, headers=headers, method="POST")
+        
+        with urllib.request.urlopen(req_obj) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            ai_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+            
+            return {
+                "formula": formula_str,
+                "fortune": ai_text
+            }
+
+    except urllib.error.HTTPError as http_err:
+        if http_err.code == 429:
+            return {
+                "formula": "本日分は終了だべさ",
+                "fortune": "本日の占いは大盛況のため売り切れだべさ！無料枠の制限（1日20回）に達したから、また明日おいで！"
+            }
+        else:
+            return {
+                "formula": f"お休み中（コード: {http_err.code}）",
+                "fortune": "ちょっとGoogleのAIが考え込んでるみたいだべさ。少し時間を空けて試してみておくれ。"
+            }
+            
+    except Exception as e:
+        return {
+            "formula": "エラーだべさ",
+            "fortune": "ちょっと調子が悪いみたいだべさ。時間を空けてもう一度ボタンを押してみておくれ。"
+        }
