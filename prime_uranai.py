@@ -1,4 +1,3 @@
-
 import json
 import random
 import datetime
@@ -20,7 +19,7 @@ ALLOWED_ORIGINS = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,   # 💡 上で作った2つの名боровを指定するべさ
+    allow_origins=ALLOWED_ORIGINS,   # 💡 上で作った2つのドメインを指定するべさ
     allow_credentials=True,
     allow_methods=["POST"],
     allow_headers=["*"],
@@ -55,7 +54,7 @@ def prime_factors(n):
 
 
 # =====================================================================
-# 🔮 部屋1：格式高い「古文調」占い
+# 🔮 部屋1：格式高い「古文調」誕生日占い
 # =====================================================================
 @app.post("/uranai_kobun")
 async def get_fortune_kobun(req: BirthdayRequest, request: Request):
@@ -64,7 +63,7 @@ async def get_fortune_kobun(req: BirthdayRequest, request: Request):
 
 
 # =====================================================================
-# 🔮 部屋2：親しみやすい「現代文」占い
+# 🔮 部屋2：親しみやすい「現代文」誕生日占い
 # =====================================================================
 @app.post("/uranai_gendai")
 async def get_fortune_gendai(req: BirthdayRequest, request: Request):
@@ -76,76 +75,18 @@ async def get_fortune_gendai(req: BirthdayRequest, request: Request):
 # 🔮 部屋3：今日の素因数占い（威厳ある古文調）
 # =====================================================================
 @app.post("/uranai_today_kobun")
-async def get_fortune_today(req: TodayUranaiRequest, request: Request):
-    check_robot(request)  # 🛡️ ここでも鉄壁の防壁がしっかり作動するべさ！
-    
-    try:
-        # 1. 数字の仕込み
-        b_num = req.month * 100 + req.day        # 誕生日の月日
-        t_num = req.today_month * 100 + req.today_day # 指定された月日
-        total_num = b_num + t_num                # 合体数
-        
-        # 2. 2つの素因数分解を実行
-        b_factors = prime_factors(b_num)
-        total_factors = prime_factors(total_num)
-        
-        # 式の文字列作成
-        b_formula = f"{b_num} ＝ 【 素数 】" if len(b_factors) == 1 else f"{b_num} ＝ {' × '.join(map(str, b_factors))}"
-        total_formula = f"{total_num} ＝ 【 素数 】" if len(total_factors) == 1 else f"{total_num} ＝ {' × '.join(map(str, total_factors))}"
-        
-        api_key = os.getenv("GEMINI_API_KEY")
-        
-        # 📜 【古文調・威厳仕様】2つの素因数から宿命を読み解くプロンプト
-        prompt = f"""
-        あなたは数式の理（ことわり）から星々の巡りと宿命を読み解く、深淵で厳かなる「素因数分解占い師」です。
-        提示された「2つの素因数分解データ」を深く凝視し、求むる日の運勢と宿命の変転を、格式高く謎めいた【古文調の美しい日本語】にて厳かに宣（のたま）ってください。
+async def get_fortune_today_kobun(req: TodayUranaiRequest, request: Request):
+    check_robot(request)  # 🛡️ 鉄壁の防壁
+    return execute_gemini_today_uranai(req, style="kobun")
 
-        【対象データ】
-        ・生れし日の月日：{req.month}月{req.day}日 (数式：{b_formula})
-        ・占うべき日の月日：{req.today_month}月{req.today_day}日
-        ・二つの霊数を合一せし数 ({b_num} ＋ {t_num} ＝ {total_num}) の数式：{total_formula}
 
-        【占いの掟】
-        1. 親しみやすさや世俗のくだけた口調は一切排し、読む者に畏怖と納得を与える深遠なる語彙（〜なり、〜べし、〜けり等）を用いてください。
-        2. もし「生れし日」と「占うべき日」が同じ（誕生日当日）なれば、合一数は元の2倍となり、必ず新たな素因数「2」が加わります。その時は「1年に1度、己が根源の霊数に『2』の祝福が重なり、新たな理が始まる奇跡の刻（とき）なり」と、至高の吉日としてお祝いしてください。
-        3. 普段の日なれば、生れし日の素因数（固有のDNA）と、合一せし数の素因数を対比し、「同じ素数が共鳴せし日」「巨大なる素数が現れし故、大いなる決断の刻なり」「2や3が細かく並び、調和に満ちたる日なり」など、数学的なシンクロニシティ（数理の神秘）を厳かに解き明かしてください。
-        4. 漢数字は一切使わず、数字を表現する場合は、必ず【半角の算用数字（2、5、43など）】を使用してください。
-        5. 文字数は250文字〜400文字程度とし、読む者を厳かなる納得へと誘う文章にしてください。
-        """
-
-        # 🚀 Gemini API へ通信
-        api_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
-        headers = {"Content-Type": "application/json"}
-        payload = {"contents": [{"parts": [{"text": prompt}]}]}
-        
-        data = json.dumps(payload).encode("utf-8")
-        req_obj = urllib.request.Request(api_url, data=data, headers=headers, method="POST")
-        
-        with urllib.request.urlopen(req_obj) as response:
-            res_data = json.loads(response.read().decode("utf-8"))
-            ai_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
-            
-            return {
-                "formula": f"生れし日:{b_formula} ／ 合一せし数:{total_formula}",
-                "fortune": ai_text
-            }
-
-    except urllib.error.HTTPError as http_err:
-        if http_err.code == 429:
-            return {
-                "formula": "本日分は終了だべさ",
-                "fortune": "星々の対話が限界に達したべさ！また明日おいで！"
-            }
-        else:
-            return {
-                "formula": f"エラー（コード: {http_err.code}）",
-                "fortune": "ちょっとAIの調和が乱れているみたいだべさ。少し時間を空けて試してみておくれ。"
-            }
-    except Exception as e:
-        return {
-            "formula": "エラーだべさ",
-            "fortune": "通信の調和が乱れました。時間を空けてもう一度試してみておクレ。"
-        }
+# =====================================================================
+# 🔮 部屋4：今日の素因数占い（親しみやすい現代文） 🌟新部屋！
+# =====================================================================
+@app.post("/uranai_today_gendai")
+async def get_fortune_today_gendai(req: TodayUranaiRequest, request: Request):
+    check_robot(request)  # 🛡️ 鉄壁の防壁
+    return execute_gemini_today_uranai(req, style="gendai")
 
 
 # =====================================================================
@@ -162,7 +103,7 @@ def check_robot(request: Request):
 
 
 # =====================================================================
-# 👑 Gemini突撃＆占い生成の共通メカニズム（裏方の仕事人：現代文・古文用）
+# 👑 Gemini突撃＆占い生成の共通メカニズム【誕生日占い用】（部屋1・2の裏方）
 # =====================================================================
 def execute_gemini_uranai(req: BirthdayRequest, style: str):
     try:
@@ -265,4 +206,96 @@ def execute_gemini_uranai(req: BirthdayRequest, style: str):
         return {
             "formula": "エラーだべさ",
             "fortune": "ちょっと調子が悪いみたいだべさ。時間を空けてもう一度ボタンを押してみておくれ。"
+        }
+
+
+# =====================================================================
+# 👑 Gemini突撃＆占い生成の共通メカニズム【今日の運勢用】 🌟（部屋3・4の裏方）
+# =====================================================================
+def execute_gemini_today_uranai(req: TodayUranaiRequest, style: str):
+    try:
+        # 1. 数字の仕込み
+        b_num = req.month * 100 + req.day              # 誕生日の月日
+        t_num = req.today_month * 100 + req.today_day   # 指定された月日
+        total_num = b_num + t_num                      # 合体数
+        
+        # 2. 2つの素因数分解を実行
+        b_factors = prime_factors(b_num)
+        total_factors = prime_factors(total_num)
+        
+        # 式の文字列作成
+        b_formula = f"{b_num} ＝ 【 素数 】" if len(b_factors) == 1 else f"{b_num} ＝ {' × '.join(map(str, b_factors))}"
+        total_formula = f"{total_num} ＝ 【 素数 】" if len(total_factors) == 1 else f"{total_num} ＝ {' × '.join(map(str, total_factors))}"
+        
+        api_key = os.getenv("GEMINI_API_KEY")
+        
+        if style == "kobun":
+            # 📜 【古文調・威厳仕様】
+            prompt = f"""
+            あなたは数式の理（ことわり）から星々の巡りと宿命を読み解く、深淵で厳かなる「素因数分解占い師」です。
+            提示された「2つの素因数分解データ」を深く凝視し、求むる日の運勢と宿命の変転を、格式高く謎めいた【古文調の美しい日本語】にて厳かに宣（のたま）ってください。
+
+            【対象データ】
+            ・生れし日の月日：{req.month}月{req.day}日 (数式：{b_formula})
+            ・占うべき日の月日：{req.today_month}月{req.today_day}日
+            ・二つの霊数を合一せし数 ({b_num} ＋ {t_num} ＝ {total_num}) の数式：{total_formula}
+
+            【占いの掟】
+            1. 親しみやすさや世俗のくだけた口調は一切排し、読む者に畏怖と納得を与える深遠なる語彙（〜なり、〜べし、〜けり等）を用いてください。
+            2. もし「生れし日」と「占うべき日」が同じ（誕生日当日）なれば、合一数は元の2倍となり、必ず新たな素因数「2」が加わります。その時は「1年に1度、己が根源の霊数に『2』の祝福が重なり、新たな理が始まる奇跡の刻（とき）なり」と、至高の吉日としてお祝いしてください。
+            3. 普段の日なれば、生れし日の素因数（固有のDNA）と、合一せし数の素因数を対比し、「同じ素数が共鳴せし日」「巨大なる素数が現れし故、大いなる決断の刻なり」「2や3が細かく並び、調和に満ちたる日なり」など、数学的なシンクロニシティ（数理の神秘）を厳かに解き明かしてください。
+            4. 漢数字は一切使わず、数字を表現する場合は、必ず【半角の算用数字（2、5、43など）】を使用してください。
+            5. 文字数は250文字〜400文字程度とし、読む者を厳かなる納得へと誘う文章にしてください。
+            """
+        else:
+            # 🌟 【現代文・親しみやすい仕様】
+            prompt = f"""
+            あなたは数式の重なりからその日の運勢を読み解く、知的で親しみやすい現代の「素因数分解占い師」です。
+            提示された「2つの素因数分解データ」を分析し、今日という特別な日の運勢やアドバイスを、前向きで元気が出る現代の言葉（丁寧な標準語の「〜です」「〜ます」）で分かりやすく占ってください。
+
+            【対象データ】
+            ・あなたの誕生日：{req.month}月{req.day}日 (数式：{b_formula})
+            ・占う今日の日付：{req.today_month}月{req.today_day}日
+            ・2つの数字を合体させた数 ({b_num} ＋ {t_num} ＝ {total_num}) の数式：{total_formula}
+
+            【占いの掟】
+            1. 古風で難しい言い回しは使わず、爽やかで優しい口調で語りかけてください。
+            2. もし「誕生日」と「占う今日の日付」が同じ（誕生日当日）なれば、合体数は元の2倍となり、必ず新しい素因数「2」が加わります。その時は「1年に1度、あなたの生まれ持った数字に『2』という素晴らしい調和と祝福が重なる特別な日です！」と、最高のハッピーな日として全力でお祝いしてください。
+            3. 普段の日であれば、誕生日の素因数（あなたのベース）と、合体した数の素因数を比べながら、「同じ数字が響き合っているラッキーデー」「大きな素数が登場したので、思い切った一歩を踏み出すチャンス」「2や3がたくさん並んで、周囲とのバランスがバッチリ取れる日」など、数学的なつながりを楽しく解説してください。
+            4. 漢数字は一切使わず、数字を表現する場合は、必ず【半角の算用数字（2、5、43など）】を使用してください。
+            5. 文字数は250文字〜400文字程度とし、読んだ人が笑顔で明日へ向かえるような文章にしてください。
+            """
+
+        # 🚀 Gemini API へ通信
+        api_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key={api_key}"
+        headers = {"Content-Type": "application/json"}
+        payload = {"contents": [{"parts": [{"text": prompt}]}]}
+        
+        data = json.dumps(payload).encode("utf-8")
+        req_obj = urllib.request.Request(api_url, data=data, headers=headers, method="POST")
+        
+        with urllib.request.urlopen(req_obj) as response:
+            res_data = json.loads(response.read().decode("utf-8"))
+            ai_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+            
+            return {
+                "formula": f"誕生日:{b_formula} ／ 合一数:{total_formula}",
+                "fortune": ai_text
+            }
+
+    except urllib.error.HTTPError as http_err:
+        if http_err.code == 429:
+            return {
+                "formula": "本日分は終了だべさ",
+                "fortune": "星々の対話が限界に達したべさ！また明日おいで！"
+            }
+        else:
+            return {
+                "formula": f"エラー（コード: {http_err.code}）",
+                "fortune": "ちょっとAIの調和が乱れているみたいだべさ。少し時間を空けて試してみておくれ。"
+            }
+    except Exception as e:
+        return {
+            "formula": "エラーだべさ",
+            "fortune": "通信の調和が乱れました。時間を空けてもう一度試してみておクレ。"
         }
