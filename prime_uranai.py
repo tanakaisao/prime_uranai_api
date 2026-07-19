@@ -1,3 +1,4 @@
+
 import json
 import random
 import datetime
@@ -74,7 +75,7 @@ async def get_fortune_gendai(req: BirthdayRequest, request: Request):
 # =====================================================================
 # 🔮 部屋3：今日の素因数占い（威厳ある古文調）
 # =====================================================================
-@app.post("/uranai_today")
+@app.post("/uranai_today_kobun")
 async def get_fortune_today(req: TodayUranaiRequest, request: Request):
     check_robot(request)  # 🛡️ ここでも鉄壁の防壁がしっかり作動するべさ！
     
@@ -138,7 +139,7 @@ async def get_fortune_today(req: TodayUranaiRequest, request: Request):
         else:
             return {
                 "formula": f"エラー（コード: {http_err.code}）",
-                "fortune": "ちょっとAIの調和が乱れているみたいだべさ。少し時間を空けて試してみておクレ。"
+                "fortune": "ちょっとAIの調和が乱れているみたいだべさ。少し時間を空けて試してみておくれ。"
             }
     except Exception as e:
         return {
